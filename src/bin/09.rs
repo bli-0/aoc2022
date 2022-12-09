@@ -38,7 +38,7 @@ fn bridges_and_stuff(i: &str) -> (String, String) {
 
     for line in i.lines() {
         let (move_type, amount) = line
-            .split_once(" ")
+            .split_once(' ')
             .map(|l| (Move::from_str(l.0), l.1.parse::<usize>().unwrap()))
             .unwrap();
 
@@ -78,23 +78,23 @@ fn adjust_tail_position(head: (i64, i64), tail: (i64, i64)) -> (i64, i64) {
     // ....3.
     // ......
     if (x_diff.abs() == 2) && (y_diff.abs() == 2) {
-        return (tail.0 + x_diff.signum(), tail.1 + y_diff.signum());
+        (tail.0 + x_diff.signum(), tail.1 + y_diff.signum())
     }
     // touching.
     else if (x_diff.abs() <= 1) && (y_diff.abs() <= 1) {
-        return tail;
+        tail
     // Horsey based movement.
     } else if (x_diff.abs() == 1) && (y_diff.abs() == 2)
         || (x_diff.abs() == 2) & (y_diff.abs() == 1)
     {
-        return (tail.0 + x_diff.signum(), tail.1 + y_diff.signum());
+        (tail.0 + x_diff.signum(), tail.1 + y_diff.signum())
     }
     // Horizontals
     else if (x_diff.abs() == 2) && (y_diff == 0) {
-        return (tail.0 + x_diff.signum(), tail.1);
+        (tail.0 + x_diff.signum(), tail.1)
     // Verticals
     } else if (x_diff.abs() == 0) && (y_diff.abs() == 2) {
-        return (tail.0, tail.1 + y_diff.signum());
+        (tail.0, tail.1 + y_diff.signum())
     } else {
         panic!("unexpected difference: {} {}", x_diff, y_diff)
     }

@@ -7,7 +7,7 @@ fn main() {
     visible_trees(INPUT)
 }
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 struct Tree {
     size: i8,
     visible: bool,
@@ -22,19 +22,6 @@ impl Tree {
         Self {
             size,
             ..Default::default()
-        }
-    }
-}
-
-impl Default for Tree {
-    fn default() -> Self {
-        Self {
-            size: Default::default(),
-            visible: Default::default(),
-            left_score: Default::default(),
-            right_score: Default::default(),
-            top_score: Default::default(),
-            bottom_score: Default::default(),
         }
     }
 }
@@ -103,11 +90,11 @@ fn visible_trees(i: &str) -> (String, String) {
         let mut max_size = -1;
         seen_tree_sizes.clear();
 
-        for j in 0..grid.len() {
-            let tree_size = grid[j][i].size;
+        for line in &mut grid {
+            let tree_size = line[i].size;
             if tree_size > max_size {
                 max_size = tree_size;
-                grid[j][i].visible = true;
+                line[i].visible = true;
             }
 
             let mut top_score = 0;
@@ -117,7 +104,7 @@ fn visible_trees(i: &str) -> (String, String) {
                     break;
                 }
             }
-            grid[j][i].top_score = top_score;
+            line[i].top_score = top_score;
 
             seen_tree_sizes.push(tree_size);
         }
@@ -160,7 +147,8 @@ fn visible_trees(i: &str) -> (String, String) {
         .iter()
         .flatten()
         .map(|tree| tree.left_score * tree.right_score * tree.top_score * tree.bottom_score)
-        .max().unwrap();
+        .max()
+        .unwrap();
 
     (total1.to_string(), max_scenic_score.to_string())
 }

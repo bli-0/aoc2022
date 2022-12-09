@@ -35,8 +35,6 @@ pub fn time_run(attr: TokenStream, item: TokenStream) -> TokenStream {
     expanded.into()
 }
 
-
-
 #[proc_macro_attribute]
 pub fn time_run2(attr: TokenStream, item: TokenStream) -> TokenStream {
     let input = parse_macro_input!(item as ItemFn);
