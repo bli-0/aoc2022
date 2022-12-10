@@ -29,8 +29,8 @@ impl Move {
 }
 
 fn bridges_and_stuff(i: &str) -> (String, String) {
-    let mut visited_tail_locations_1: HashSet<(i64, i64)> = HashSet::new();
-    let mut visited_tail_locations_2: HashSet<(i64, i64)> = HashSet::new();
+    let mut visited_tail_locations_1: HashSet<(i64, i64)> = HashSet::with_capacity(10000);
+    let mut visited_tail_locations_2: HashSet<(i64, i64)> = HashSet::with_capacity(10000);
     visited_tail_locations_1.insert((0, 0));
     visited_tail_locations_2.insert((0, 0));
 
@@ -68,34 +68,9 @@ fn adjust_tail_position(head: (i64, i64), tail: (i64, i64)) -> (i64, i64) {
     let x_diff = head.0 - tail.0;
     let y_diff = head.1 - tail.1;
 
-    // Special case for Part 2 - we can end up in a situation where we move in full diagonals.
-    // E.g. for `3`, H moves to the left.
-    // ..H1..
-    // ....2.
-    // .....3
-    //
-    // .H12..
-    // ....3.
-    // ......
-    if (x_diff.abs() == 2) && (y_diff.abs() == 2) {
+    if (x_diff.abs() == 2) || (y_diff.abs() == 2) {
         (tail.0 + x_diff.signum(), tail.1 + y_diff.signum())
-    }
-    // touching.
-    else if (x_diff.abs() <= 1) && (y_diff.abs() <= 1) {
-        tail
-    // Horsey based movement.
-    } else if (x_diff.abs() == 1) && (y_diff.abs() == 2)
-        || (x_diff.abs() == 2) & (y_diff.abs() == 1)
-    {
-        (tail.0 + x_diff.signum(), tail.1 + y_diff.signum())
-    }
-    // Horizontals
-    else if (x_diff.abs() == 2) && (y_diff == 0) {
-        (tail.0 + x_diff.signum(), tail.1)
-    // Verticals
-    } else if (x_diff.abs() == 0) && (y_diff.abs() == 2) {
-        (tail.0, tail.1 + y_diff.signum())
     } else {
-        panic!("unexpected difference: {} {}", x_diff, y_diff)
+        tail
     }
 }
