@@ -50,7 +50,7 @@ pub fn time_run2(attr: TokenStream, item: TokenStream) -> TokenStream {
             let mut result1: String = String::default();
             let mut result2: String = String::default();
 
-            for i in 0..1000 {
+            for i in 0..1 {
                 let start_time = std::time::Instant::now();
                 (result1, result2) = #block;
                 let duration = start_time.elapsed();

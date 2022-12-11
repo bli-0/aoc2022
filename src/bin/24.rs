@@ -7,8 +7,6 @@ fn main() {
     cathode_ray_tube(INPUT)
 }
 
-fn cathode_ray_tube(i: &str) -> (String, String) {
-
-
+fn cathode_ray_tube(_i: &str) -> (String, String) {
     todo!()
 }

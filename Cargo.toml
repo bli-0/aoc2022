@@ -12,3 +12,6 @@ proc_macro = true
 syn = {version = "*", features = ["parsing", "full"]}
 quote = {version = "*"}
 itertools = "0.10.5"
+num-bigint = "0.4.3"
+num-traits = "0.2.15"
+lazy_static = "1.4.0"
