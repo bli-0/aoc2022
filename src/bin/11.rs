@@ -112,7 +112,7 @@ fn monkeys() -> (String, String) {
     for _ in 0..10000 {
         for m in 0..monkeys1.len() {
             for item in monkeys2[m].items.iter_mut() {
-                *item %=  total_product
+                *item %= total_product
             }
             monkeys2[m].do_inspection2();
             let (true_index, true_items, false_index, false_items) = monkeys2[m].throw_items();
