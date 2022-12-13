@@ -23,7 +23,7 @@ enum Element {
 
 impl Element {
     // This seems to give the same results as serde::Deserialize, so this is actually fine...
-    #[allow(unused)]
+    // I swapped to serde in case there was a bug in this bit of the code - turns out there was not!
     fn from_char_array(s: &[char]) -> Self {
         let mut elements: Vec<Element> = vec![];
 
@@ -274,10 +274,10 @@ fn distress_signal(i: &str) -> (String, String) {
         .map(|group| {
             let v: Vec<&str> = group.split('\n').collect();
             let first: String = v[0].chars().collect();
-            let second: String = v[1].chars().collect();
+            let second: Vec<char> = v[1].chars().collect();
             (
                 serde_json::from_str::<'_, Element>(&first).unwrap(),
-                serde_json::from_str::<'_, Element>(&second).unwrap(),
+                Element::from_char_array(&second),
             )
         })
         .collect();
@@ -293,7 +293,8 @@ fn distress_signal(i: &str) -> (String, String) {
 
     // Part 2
     let divider1: Element = serde_json::from_str("[[2]]").unwrap();
-    let divider2: Element = serde_json::from_str("[[6]]").unwrap();
+    let divider2_chars: Vec<char> = "[[6]]".chars().collect();
+    let divider2 = Element::from_char_array(&divider2_chars);
 
     let mut ordered_elems: Vec<Element> =
         pairings.into_iter().flat_map(|p| vec![p.0, p.1]).collect();
@@ -306,8 +307,6 @@ fn distress_signal(i: &str) -> (String, String) {
         Cmp::Indetermined => std::cmp::Ordering::Equal,
         Cmp::NotOrdered => std::cmp::Ordering::Greater,
     });
-
-    let ordered_elems = dbg!(ordered_elems);
 
     let (i1, _) = ordered_elems
         .iter()
