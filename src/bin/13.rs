@@ -14,23 +14,16 @@ enum Cmp {
     NotOrdered,
 }
 
-impl Cmp {
-    fn to_bool(self) -> bool {
-        match self {
-            Cmp::Ordered => true,
-            Cmp::Indetermined => panic!("non determined ordering"),
-            Cmp::NotOrdered => false,
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Deserialize)]
+#[serde(untagged)]
 enum Element {
     Value(u64),
-    List { elems: Vec<Element> },
+    List(Vec<Element>),
 }
 
 impl Element {
+    // This seems to give the same results as serde::Deserialize, so this is actually fine...
+    #[allow(unused)]
     fn from_char_array(s: &[char]) -> Self {
         let mut elements: Vec<Element> = vec![];
 
@@ -87,7 +80,7 @@ impl Element {
             elements.push(Element::Value(s.parse::<u64>().unwrap()));
         }
 
-        Self::List { elems: elements }
+        Self::List(elements)
     }
 
     fn is_ordered(&self, other: &Element) -> Cmp {
@@ -99,35 +92,33 @@ impl Element {
                 if self_value == other_value {
                     return Cmp::Indetermined;
                 }
-
-                return Cmp::Ordered;
+                Cmp::Ordered
             }
             (Element::Value(self_value), Element::List { .. }) => {
-                let self_list = Element::List {
-                    elems: vec![Element::Value(*self_value)],
-                };
-                return self_list.is_ordered(&other);
+                let self_list = Element::List(vec![Element::Value(*self_value)]);
+                self_list.is_ordered(other)
             }
             (Element::List { .. }, Element::Value(other_value)) => {
-                let other_list = Element::List {
-                    elems: vec![Element::Value(*other_value)],
-                };
-                return self.is_ordered(&other_list);
+                let other_list = Element::List(vec![Element::Value(*other_value)]);
+                self.is_ordered(&other_list)
             }
-            (Element::List { elems: elems_self }, Element::List { elems: elems_other }) => {
-                for i in 0..elems_self.len() {
+            (Element::List(elems_self), Element::List(elems_other)) => {
+                for (i, _) in elems_self.iter().enumerate() {
                     let other = match elems_other.get(i) {
                         Some(elem) => elem,
                         None => return Cmp::NotOrdered,
                     };
 
-                    match elems_self[i].is_ordered(&other) {
+                    match elems_self[i].is_ordered(other) {
                         Cmp::Ordered => return Cmp::Ordered,
                         Cmp::Indetermined => continue,
                         Cmp::NotOrdered => return Cmp::NotOrdered,
                     }
                 }
-                return Cmp::Ordered;
+                if elems_self.len() == elems_other.len() {
+                    return Cmp::Indetermined;
+                }
+                Cmp::Ordered
             }
         }
     }
@@ -139,54 +130,38 @@ mod test {
 
     #[test]
     fn single_value() {
-        let input: Vec<char> = "[10]".chars().collect();
-
-        let elem = Element::from_char_array(&input);
-
-        assert_eq!(
-            elem,
-            Element::List {
-                elems: vec![Element::Value(10),]
-            }
-        );
+        let input: String = "[10]".chars().collect();
+        let elem: Element = serde_json::from_str(&input).unwrap();
+        assert_eq!(elem, Element::List(vec![Element::Value(10),]));
     }
 
     #[test]
     fn values() {
-        let input: Vec<char> = "[1,1,3,1,1]".chars().collect();
-
-        let elem = Element::from_char_array(&input);
+        let input: String = "[1,1,3,1,1]".chars().collect();
+        let elem: Element = serde_json::from_str(&input).unwrap();
 
         assert_eq!(
             elem,
-            Element::List {
-                elems: vec![
-                    Element::Value(1),
-                    Element::Value(1),
-                    Element::Value(3),
-                    Element::Value(1),
-                    Element::Value(1),
-                ]
-            }
+            Element::List(vec![
+                Element::Value(1),
+                Element::Value(1),
+                Element::Value(3),
+                Element::Value(1),
+                Element::Value(1),
+            ])
         );
     }
 
     #[test]
     fn single_nested() {
-        let input: Vec<char> = "[[1],4]".chars().collect();
-
-        let elem = Element::from_char_array(&input);
-
+        let input: String = "[[1],4]".chars().collect();
+        let elem: Element = serde_json::from_str(&input).unwrap();
         assert_eq!(
             elem,
-            Element::List {
-                elems: vec![
-                    Element::List {
-                        elems: vec![Element::Value(1)]
-                    },
-                    Element::Value(4),
-                ]
-            }
+            Element::List(vec![
+                Element::List(vec![Element::Value(1)]),
+                Element::Value(4),
+            ])
         );
     }
 
@@ -198,16 +173,10 @@ mod test {
 
         assert_eq!(
             elem,
-            Element::List {
-                elems: vec![
-                    Element::List {
-                        elems: vec![Element::Value(1)]
-                    },
-                    Element::List {
-                        elems: vec![Element::Value(2)]
-                    },
-                ]
-            }
+            Element::List(vec![
+                Element::List(vec![Element::Value(1)]),
+                Element::List(vec![Element::Value(2)]),
+            ])
         );
     }
 
@@ -219,19 +188,13 @@ mod test {
 
         assert_eq!(
             elem,
-            Element::List {
-                elems: vec![
-                    Element::List {
-                        elems: vec![
-                            Element::List {
-                                elems: vec![Element::Value(1)]
-                            },
-                            Element::Value(2)
-                        ]
-                    },
-                    Element::Value(3)
-                ]
-            }
+            Element::List(vec![
+                Element::List(vec![
+                    Element::List(vec![Element::Value(1)]),
+                    Element::Value(2)
+                ]),
+                Element::Value(3)
+            ])
         );
     }
 
@@ -241,12 +204,7 @@ mod test {
 
         let elem = Element::from_char_array(&input);
 
-        assert_eq!(
-            elem,
-            Element::List {
-                elems: vec![Element::List { elems: vec![] }]
-            }
-        );
+        assert_eq!(elem, Element::List(vec![Element::List(vec![])]));
     }
 
     #[test]
@@ -257,16 +215,10 @@ mod test {
 
         assert_eq!(
             elem,
-            Element::List {
-                elems: vec![
-                    Element::List {
-                        elems: vec![Element::List {
-                            elems: vec![Element::List { elems: vec![] }]
-                        }]
-                    },
-                    Element::List { elems: vec![] }
-                ]
-            }
+            Element::List(vec![
+                Element::List(vec![Element::List(vec![Element::List(vec![])])]),
+                Element::List(vec![])
+            ])
         );
     }
 
@@ -316,30 +268,59 @@ mod test {
 }
 
 fn distress_signal(i: &str) -> (String, String) {
-    let groups: Vec<&str> = i.split("\n\n").collect();
+    let groups = i.split("\n\n");
     let pairings: Vec<(Element, Element)> = groups
         .into_iter()
         .map(|group| {
-            let v: Vec<&str> = group.split("\n").collect();
-            let first: Vec<char> = v[0].chars().collect();
-            let second: Vec<char> = v[1].chars().collect();
+            let v: Vec<&str> = group.split('\n').collect();
+            let first: String = v[0].chars().collect();
+            let second: String = v[1].chars().collect();
             (
-                Element::from_char_array(&first),
-                Element::from_char_array(&second),
+                serde_json::from_str::<'_, Element>(&first).unwrap(),
+                serde_json::from_str::<'_, Element>(&second).unwrap(),
             )
         })
         .collect();
 
+    // Part 1
     let mut ordered_indices: Vec<usize> = vec![];
     for (i, pair) in pairings.iter().enumerate() {
         if pair.0.is_ordered(&pair.1) == Cmp::Ordered {
             ordered_indices.push(i + 1)
         }
     }
-
-    let ordered_indices = dbg!(ordered_indices);
-
     let part1 = ordered_indices.into_iter().sum::<usize>().to_string();
 
-    (part1, "".to_string())
+    // Part 2
+    let divider1: Element = serde_json::from_str("[[2]]").unwrap();
+    let divider2: Element = serde_json::from_str("[[6]]").unwrap();
+
+    let mut ordered_elems: Vec<Element> =
+        pairings.into_iter().flat_map(|p| vec![p.0, p.1]).collect();
+
+    ordered_elems.push(divider1.clone());
+    ordered_elems.push(divider2.clone());
+
+    ordered_elems.sort_by(|a, b| match a.is_ordered(b) {
+        Cmp::Ordered => std::cmp::Ordering::Less,
+        Cmp::Indetermined => std::cmp::Ordering::Equal,
+        Cmp::NotOrdered => std::cmp::Ordering::Greater,
+    });
+
+    let ordered_elems = dbg!(ordered_elems);
+
+    let (i1, _) = ordered_elems
+        .iter()
+        .enumerate()
+        .find(|(_, e)| *e == &divider1)
+        .unwrap();
+    let (i2, _) = ordered_elems
+        .iter()
+        .enumerate()
+        .find(|(_, e)| *e == &divider2)
+        .unwrap();
+
+    let part2 = ((i1 + 1) * (i2 + 1)).to_string();
+
+    (part1, part2)
 }
