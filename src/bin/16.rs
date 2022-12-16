@@ -196,17 +196,15 @@ fn calculate_max_pressures_with_elephant(g: Graph) -> u64 {
     // For each node in the graph, either assign it to yourself or the elephant
     // And do the same algorithm in p1 for each and then sum the two.
     // Effectively we split the graph into two subgraphs and run the same algorithm
-    // Although this creates 2^15(ish) possible combinations it should finish in about 10 minutes :/.
     let nodes: Vec<String> = g
         .nodes
         .iter()
         .filter_map(|(k, _)| if k != "AA" { Some(k.clone()) } else { None })
         .collect();
 
-    // We only need to do combinations up to len/2, otherwise we end up repeating combinations.
     // We can cheat a bit and multithread this.
     let mut handles: Vec<(usize, usize, JoinHandle<u64>)> = vec![];
-
+    // We only need to do combinations up to len/2, otherwise we end up repeating combinations.
     let len = nodes.len() / 2;
     for i in 1..=len {
         let combinations = nodes.clone().into_iter().combinations(i);
