@@ -28,29 +28,20 @@ fn boiling_boulders(i: &str) -> (String, String) {
     // Take 1 exposed side away from each neighbour.
     for cube in grid.clone().values() {
         for x in [cube.x - 1, cube.x + 1] {
-            match grid.get_mut(&(x, cube.y, cube.z)) {
-                Some(touching_cube) => {
-                    touching_cube.exposed_sides -= 1;
-                }
-                None => {}
+            if let Some(touching_cube) = grid.get_mut(&(x, cube.y, cube.z)) {
+                touching_cube.exposed_sides -= 1;
             }
         }
 
         for y in [cube.y - 1, cube.y + 1] {
-            match grid.get_mut(&(cube.x, y, cube.z)) {
-                Some(touching_cube) => {
-                    touching_cube.exposed_sides -= 1;
-                }
-                None => {}
+            if let Some(touching_cube) = grid.get_mut(&(cube.x, y, cube.z)) {
+                touching_cube.exposed_sides -= 1;
             }
         }
 
         for z in [cube.z - 1, cube.z + 1] {
-            match grid.get_mut(&(cube.x, cube.y, z)) {
-                Some(touching_cube) => {
-                    touching_cube.exposed_sides -= 1;
-                }
-                None => {}
+            if let Some(touching_cube) = grid.get_mut(&(cube.x, cube.y, z)) {
+                touching_cube.exposed_sides -= 1;
             }
         }
     }
