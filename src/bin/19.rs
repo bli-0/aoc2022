@@ -39,7 +39,7 @@ fn not_enough_minerals(i: &str) -> (String, String) {
 
     for (blue_print, state) in &initial_states {
         let mut answer = Answer::new();
-        answer.build_nodes_at(state.clone(), 24);
+        answer.build_nodes_at(*state, 24);
 
         scores.push(answer.current_max * blue_print);
     }
@@ -50,7 +50,7 @@ fn not_enough_minerals(i: &str) -> (String, String) {
 
     for (_, state) in p2_input {
         let mut answer = Answer::new();
-        answer.build_nodes_at(state.clone(), 32);
+        answer.build_nodes_at(*state, 32);
 
         scores2.push(answer.current_max);
     }
@@ -130,7 +130,7 @@ impl FactoryState {
 
         // We have to wait 1 minute **after** we have the resources before the robot is actually made.
         // Since resource collection happens prior to us being able to build a robot.
-        decisions.push(Decision::OreRobot(minutes_for_next_ore_robot + 1));
+        decisions.push(Decision::Ore(minutes_for_next_ore_robot + 1));
 
         let minutes_for_next_clay_robot = if self.ores < self.clay_machine_cost {
             let mut m = (self.clay_machine_cost - self.ores) / self.ore_machines;
@@ -142,7 +142,7 @@ impl FactoryState {
             0
         };
 
-        decisions.push(Decision::ClayRobot(minutes_for_next_clay_robot + 1));
+        decisions.push(Decision::Clay(minutes_for_next_clay_robot + 1));
 
         // Only plot obsidian robot if we have any clay robots to generate stuff.
         if self.clay_machines > 0 {
@@ -166,7 +166,7 @@ impl FactoryState {
                 0
             };
 
-            decisions.push(Decision::ObsidianRobot(
+            decisions.push(Decision::Obsidian(
                 mins_for_clay_for_obsidian_robot.max(mins_for_ore_for_obsidian_robot) + 1,
             ))
         }
@@ -193,7 +193,7 @@ impl FactoryState {
                 0
             };
 
-            decisions.push(Decision::GeodeRobot(
+            decisions.push(Decision::Geode(
                 mins_for_obsidian_for_geode_robot.max(mins_for_ore_for_geode_robot) + 1,
             ))
         }
@@ -204,14 +204,11 @@ impl FactoryState {
 
 enum Decision {
     // The stored value is the number of minutes to wait in order to enact the decision.
-    OreRobot(u64),
-    ClayRobot(u64),
-    ObsidianRobot(u64),
-    GeodeRobot(u64),
+    Ore(u64),
+    Clay(u64),
+    Obsidian(u64),
+    Geode(u64),
 }
-
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
-struct StateKey(u64, u64, u64, u64, u64, u64, u64, u64, u64);
 
 #[derive(Debug, Copy, Clone)]
 struct Answer {
@@ -225,12 +222,11 @@ impl Answer {
 
     fn build_nodes_at(&mut self, current: FactoryState, mins: u64) {
         let decisions = current.get_next_decision_points();
-        // Decide to build machines -- we're using the valid decisions from
-        // the current node so in theory these operations should always work.
+        // Decide what machines to build and then recursively go down each decision.
         for d in decisions {
             match d {
-                Decision::OreRobot(mins_to_wait) => {
-                    let mut next = current.clone();
+                Decision::Ore(mins_to_wait) => {
+                    let mut next = current;
                     // Optimisation 1:
                     // If we have enough ore machines to build 1 machine per minute, stop building them.
                     if next.ore_machines
@@ -248,16 +244,17 @@ impl Answer {
                     }
 
                     next.wait_x_minutes(mins_to_wait);
+                    // If we have to go beyond the maximum time, don't bother recursing.
                     if next.minutes > mins {
                         continue;
                     }
 
                     next.ores = next.ores.checked_sub(next.ore_machine_cost).unwrap();
                     next.ore_machines += 1;
-                    self.build_nodes_at(next.clone(), mins)
+                    self.build_nodes_at(next, mins)
                 }
-                Decision::ClayRobot(mins_to_wait) => {
-                    let mut next = current.clone();
+                Decision::Clay(mins_to_wait) => {
+                    let mut next = current;
 
                     // Optimisation 1:
                     // If we have enough clay machines to build 1 machine per minute, stop building them.
@@ -272,10 +269,10 @@ impl Answer {
 
                     next.ores = next.ores.checked_sub(next.clay_machine_cost).unwrap();
                     next.clay_machines += 1;
-                    self.build_nodes_at(next.clone(), mins)
+                    self.build_nodes_at(next, mins)
                 }
-                Decision::ObsidianRobot(mins_to_wait) => {
-                    let mut next = current.clone();
+                Decision::Obsidian(mins_to_wait) => {
+                    let mut next = current;
                     // Optimisation 1:
                     // If we have enough obsidian machines to build 1 machine per minute, stop building them.
                     if next.obsidian_machines >= next.geode_machine_cost.1 {
@@ -293,10 +290,10 @@ impl Answer {
                         .checked_sub(next.obsidian_machine_cost.1)
                         .unwrap();
                     next.obsidian_machines += 1;
-                    self.build_nodes_at(next.clone(), mins)
+                    self.build_nodes_at(next, mins)
                 }
-                Decision::GeodeRobot(mins_to_wait) => {
-                    let mut next = current.clone();
+                Decision::Geode(mins_to_wait) => {
+                    let mut next = current;
                     next.wait_x_minutes(mins_to_wait);
                     if next.minutes > mins {
                         continue;
@@ -308,13 +305,13 @@ impl Answer {
                         .checked_sub(next.geode_machine_cost.1)
                         .unwrap();
                     next.geode_machines += 1;
-                    self.build_nodes_at(next.clone(), mins)
+                    self.build_nodes_at(next, mins)
                 }
             }
         }
 
         // For each point, record what the max geode nodes would be after x minutes - only if a geode machine exists.
-        let mut next = current.clone();
+        let mut next = current;
         if next.geode_machines > 0 {
             let mins_to_wait = mins - next.minutes;
             next.wait_x_minutes(mins_to_wait);
