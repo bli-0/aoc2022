@@ -212,7 +212,7 @@ enum Decision {
 
 #[derive(Debug, Copy, Clone)]
 struct Answer {
-    current_max: u64
+    current_max: u64,
 }
 
 impl Answer {
