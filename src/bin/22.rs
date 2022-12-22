@@ -40,11 +40,7 @@ fn monkey_map(i: &str) -> (String, String) {
 
     for i in instructions {
         grid2.do_instruction_cube(i);
-        // println!();
-        // grid2.print();
     }
-
-    grid2.print();
 
     (grid.get_score().to_string(), grid2.get_score().to_string())
 }
@@ -425,11 +421,11 @@ impl Grid {
                         if self.my_location.0 == 0 {
                             // Step off 5 on the left, go to 1 from the left with inverted Y
                             debug_assert!(Self::is_in_bound(
-                                (50, 0 + (149 - self.my_location.1)),
+                                (50, 149 - self.my_location.1),
                                 Side::One
                             ));
 
-                            ((50, 0 + (149 - self.my_location.1)), Facing::Right)
+                            ((50, 149 - self.my_location.1), Facing::Right)
                         } else {
                             ((self.my_location.0 - 1, self.my_location.1), Facing::Left)
                         }
@@ -478,11 +474,11 @@ impl Grid {
                 Side::Four => {
                     if self.my_location.0 == 99 {
                         debug_assert!(Self::is_in_bound(
-                            (149, 0 + (149 - self.my_location.1)),
+                            (149, 149 - self.my_location.1),
                             Side::Two
                         ));
 
-                        ((149, 0 + (149 - self.my_location.1)), Facing::Left)
+                        ((149, 149 - self.my_location.1), Facing::Left)
                     } else {
                         ((self.my_location.0 + 1, self.my_location.1), Facing::Right)
                     }
@@ -510,7 +506,7 @@ impl Grid {
                             Side::Six
                         ));
 
-                        ((0, 150 + (self.my_location.0 - 50)), Facing::Left)
+                        ((0, 150 + (self.my_location.0 - 50)), Facing::Right)
                     } else {
                         ((self.my_location.0, self.my_location.1 - 1), Facing::Up)
                     }
@@ -518,12 +514,11 @@ impl Grid {
                 Side::Two => {
                     if self.my_location.1 == 0 {
                         debug_assert!(Self::is_in_bound(
-                            (0 + (self.my_location.0 - 100), 199),
+                            (self.my_location.0 - 100, 199),
                             Side::Six
                         ));
 
-
-                        ((0 + (self.my_location.0 - 100), 199), Facing::Up)
+                        ((self.my_location.0 - 100, 199), Facing::Up)
                     } else {
                         ((self.my_location.0, self.my_location.1 - 1), Facing::Up)
                     }
@@ -571,10 +566,7 @@ impl Grid {
                 }
                 Side::Six => {
                     if self.my_location.1 == 199 {
-                        debug_assert!(Self::is_in_bound(
-                            (100 + self.my_location.0, 0),
-                            Side::Two
-                        ));
+                        debug_assert!(Self::is_in_bound((100 + self.my_location.0, 0), Side::Two));
 
                         ((100 + self.my_location.0, 0), Facing::Down)
                     } else {
