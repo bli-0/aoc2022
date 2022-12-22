@@ -32,11 +32,21 @@ fn monkey_map(i: &str) -> (String, String) {
         ));
     }
     grid.set_starting_point();
-    for i in instructions {
+    let mut grid2 = grid.clone();
+
+    for i in instructions.clone() {
         grid.do_instruction(i);
     }
 
-    (grid.get_part1().to_string(), "".to_string())
+    for i in instructions {
+        grid2.do_instruction_cube(i);
+        // println!();
+        // grid2.print();
+    }
+
+    grid2.print();
+
+    (grid.get_score().to_string(), grid2.get_score().to_string())
 }
 
 #[derive(Debug, Clone)]
@@ -257,7 +267,388 @@ impl Grid {
         }
     }
 
-    fn get_part1(&self) -> u64 {
+    // Each cube face is a 50x50 grid. One way to do this
+    // is to "teleport" the location to the correct place +
+    // orientation whenever we step off a face.
+    // The input is of this shape
+    //   1 2
+    //   3
+    // 5 4
+    // 6
+    //
+    // 1:
+    //         6
+    //       5 1 2
+    //         3
+    // When moving from 1 -> 2 and 3, the orientation is kept the same.
+    // going off 1 on the left, results in coming into 5 from the left (with inverted indices)
+    // going off 1 at the top results in coming into 6 from the left
+    // 2:
+    //         6
+    //       1 2 4
+    //         3
+    // When moving from 2 -> 1, the orientation is kept the same.
+    // going off 2 on the top, results in coming into 6 from the bottom
+    // going off 2 at the right results in coming into 4 from the right (with inverted Y)
+    // going off 2 at the bottom results in coming into 3 from the right
+    // 3:
+    //         1
+    //       5 3 2
+    //         4
+    // When moving from 3 -> 1, 4, the orientation is kept the same.
+    // going off 3 on the left, results in coming into 5 from the top
+    // going off 3 at the right results in coming into 2 from the bottom
+    // 4:
+    //         3
+    //       5 4 2
+    //         6
+    // When moving from 4 -> 3 and 5, the orientation is kept the same.
+    // going off 4 on the right, results in coming into 2 from the right (with inverted Y indices)
+    // going off 4 at the bottom results in coming into 6 from the right
+    // 5:
+    //         3
+    //       1 5 4
+    //         6
+    // When moving from 5 -> 4, 6, the orientation is kept the same.
+    // going off 5 on the left, results in coming into 1 from the left (with inverted Y)
+    // going off 5 at the top results in coming into 3 from the left
+    // 6:
+    //         5
+    //       1 6 4
+    //         2
+    // When moving from 6 -> 5, the orientation is kept the same.
+    // going off 6 on the left, results in coming into 1 from the top
+    // going off 6 at the bottom results in coming into 2 from the top
+    // going off 6 at the right results in coming into 4 from the bottom
+    const SIDE1_BOUNDS: ((usize, usize), (usize, usize)) = ((50, 100), (0, 50));
+    const SIDE2_BOUNDS: ((usize, usize), (usize, usize)) = ((100, 150), (0, 50));
+    const SIDE3_BOUNDS: ((usize, usize), (usize, usize)) = ((50, 100), (50, 100));
+    const SIDE4_BOUNDS: ((usize, usize), (usize, usize)) = ((50, 100), (100, 150));
+    const SIDE5_BOUNDS: ((usize, usize), (usize, usize)) = ((0, 50), (100, 150));
+    const SIDE6_BOUNDS: ((usize, usize), (usize, usize)) = ((0, 50), (150, 200));
+
+    fn is_in_bound(coord: (usize, usize), s: Side) -> bool {
+        let bound = match s {
+            Side::One => Self::SIDE1_BOUNDS,
+            Side::Two => Self::SIDE2_BOUNDS,
+            Side::Three => Self::SIDE3_BOUNDS,
+            Side::Four => Self::SIDE4_BOUNDS,
+            Side::Five => Self::SIDE5_BOUNDS,
+            Side::Six => Self::SIDE6_BOUNDS,
+        };
+
+        coord.0 >= bound.0 .0
+            && coord.0 < bound.0 .1
+            && coord.1 >= bound.1 .0
+            && coord.1 < bound.1 .1
+    }
+
+    fn get_side(&self) -> Side {
+        if self.my_location.0 >= Self::SIDE1_BOUNDS.0 .0
+            && self.my_location.0 < Self::SIDE1_BOUNDS.0 .1
+            && self.my_location.1 >= Self::SIDE1_BOUNDS.1 .0
+            && self.my_location.1 < Self::SIDE1_BOUNDS.1 .1
+        {
+            Side::One
+        } else if self.my_location.0 >= Self::SIDE2_BOUNDS.0 .0
+            && self.my_location.0 < Self::SIDE2_BOUNDS.0 .1
+            && self.my_location.1 >= Self::SIDE2_BOUNDS.1 .0
+            && self.my_location.1 < Self::SIDE2_BOUNDS.1 .1
+        {
+            Side::Two
+        } else if self.my_location.0 >= Self::SIDE3_BOUNDS.0 .0
+            && self.my_location.0 < Self::SIDE3_BOUNDS.0 .1
+            && self.my_location.1 >= Self::SIDE3_BOUNDS.1 .0
+            && self.my_location.1 < Self::SIDE3_BOUNDS.1 .1
+        {
+            Side::Three
+        } else if self.my_location.0 >= Self::SIDE4_BOUNDS.0 .0
+            && self.my_location.0 < Self::SIDE4_BOUNDS.0 .1
+            && self.my_location.1 >= Self::SIDE4_BOUNDS.1 .0
+            && self.my_location.1 < Self::SIDE4_BOUNDS.1 .1
+        {
+            Side::Four
+        } else if self.my_location.0 >= Self::SIDE5_BOUNDS.0 .0
+            && self.my_location.0 < Self::SIDE5_BOUNDS.0 .1
+            && self.my_location.1 >= Self::SIDE5_BOUNDS.1 .0
+            && self.my_location.1 < Self::SIDE5_BOUNDS.1 .1
+        {
+            Side::Five
+        } else if self.my_location.0 >= Self::SIDE6_BOUNDS.0 .0
+            && self.my_location.0 < Self::SIDE6_BOUNDS.0 .1
+            && self.my_location.1 >= Self::SIDE6_BOUNDS.1 .0
+            && self.my_location.1 < Self::SIDE6_BOUNDS.1 .1
+        {
+            Side::Six
+        } else {
+            panic!("unexpected location")
+        }
+    }
+
+    // Peeks the next location based on the current position of self & whether the next
+    // slot is free.
+    fn next_location(&self) -> ((usize, usize), Facing, bool) {
+        let current_side = self.get_side();
+        let (next_loc, next_facing) = match self.my_facing {
+            Facing::Left => {
+                match current_side {
+                    Side::Two | Side::Four => {
+                        ((self.my_location.0 - 1, self.my_location.1), Facing::Left)
+                    }
+                    Side::One => {
+                        if self.my_location.0 == 50 {
+                            // We have stepped off 1 to the left, so go to 5 from the left, flipping Y
+                            debug_assert!(Self::is_in_bound(
+                                (0, 149 - self.my_location.1),
+                                Side::Five
+                            ));
+
+                            ((0, 149 - self.my_location.1), Facing::Right)
+                        } else {
+                            ((self.my_location.0 - 1, self.my_location.1), Facing::Left)
+                        }
+                    }
+                    Side::Three => {
+                        if self.my_location.0 == 50 {
+                            // Step off 3 on the left, go to 5 from the top
+                            debug_assert!(Self::is_in_bound(
+                                (self.my_location.1 - 50, 100),
+                                Side::Five
+                            ));
+
+                            ((self.my_location.1 - 50, 100), Facing::Down)
+                        } else {
+                            ((self.my_location.0 - 1, self.my_location.1), Facing::Left)
+                        }
+                    }
+                    Side::Five => {
+                        if self.my_location.0 == 0 {
+                            // Step off 5 on the left, go to 1 from the left with inverted Y
+                            debug_assert!(Self::is_in_bound(
+                                (50, 0 + (149 - self.my_location.1)),
+                                Side::One
+                            ));
+
+                            ((50, 0 + (149 - self.my_location.1)), Facing::Right)
+                        } else {
+                            ((self.my_location.0 - 1, self.my_location.1), Facing::Left)
+                        }
+                    }
+                    Side::Six => {
+                        if self.my_location.0 == 0 {
+                            // Step off 6 on the left, go to 1 from the top
+                            debug_assert!(Self::is_in_bound(
+                                (self.my_location.1 - 100, 0),
+                                Side::One
+                            ));
+
+                            ((self.my_location.1 - 100, 0), Facing::Down)
+                        } else {
+                            ((self.my_location.0 - 1, self.my_location.1), Facing::Left)
+                        }
+                    }
+                }
+            }
+            Facing::Right => match current_side {
+                Side::One | Side::Five => {
+                    ((self.my_location.0 + 1, self.my_location.1), Facing::Right)
+                }
+                Side::Two => {
+                    if self.my_location.0 == 149 {
+                        debug_assert!(Self::is_in_bound(
+                            (99, 100 + (49 - self.my_location.1)),
+                            Side::Four
+                        ));
+                        ((99, 100 + (49 - self.my_location.1)), Facing::Left)
+                    } else {
+                        ((self.my_location.0 + 1, self.my_location.1), Facing::Right)
+                    }
+                }
+                Side::Three => {
+                    if self.my_location.0 == 99 {
+                        debug_assert!(Self::is_in_bound(
+                            (100 + (self.my_location.1 - 50), 49),
+                            Side::Two
+                        ));
+                        ((100 + (self.my_location.1 - 50), 49), Facing::Up)
+                    } else {
+                        ((self.my_location.0 + 1, self.my_location.1), Facing::Right)
+                    }
+                }
+                Side::Four => {
+                    if self.my_location.0 == 99 {
+                        debug_assert!(Self::is_in_bound(
+                            (149, 0 + (149 - self.my_location.1)),
+                            Side::Two
+                        ));
+
+                        ((149, 0 + (149 - self.my_location.1)), Facing::Left)
+                    } else {
+                        ((self.my_location.0 + 1, self.my_location.1), Facing::Right)
+                    }
+                }
+                Side::Six => {
+                    if self.my_location.0 == 49 {
+                        debug_assert!(Self::is_in_bound(
+                            (50 + (self.my_location.1 - 150), 149),
+                            Side::Four
+                        ));
+                        ((50 + (self.my_location.1 - 150), 149), Facing::Up)
+                    } else {
+                        ((self.my_location.0 + 1, self.my_location.1), Facing::Right)
+                    }
+                }
+            },
+            Facing::Up => match current_side {
+                Side::Three | Side::Four | Side::Six => {
+                    ((self.my_location.0, self.my_location.1 - 1), Facing::Up)
+                }
+                Side::One => {
+                    if self.my_location.1 == 0 {
+                        debug_assert!(Self::is_in_bound(
+                            (0, 150 + (self.my_location.0 - 50)),
+                            Side::Six
+                        ));
+
+                        ((0, 150 + (self.my_location.0 - 50)), Facing::Left)
+                    } else {
+                        ((self.my_location.0, self.my_location.1 - 1), Facing::Up)
+                    }
+                }
+                Side::Two => {
+                    if self.my_location.1 == 0 {
+                        debug_assert!(Self::is_in_bound(
+                            (0 + (self.my_location.0 - 100), 199),
+                            Side::Six
+                        ));
+
+
+                        ((0 + (self.my_location.0 - 100), 199), Facing::Up)
+                    } else {
+                        ((self.my_location.0, self.my_location.1 - 1), Facing::Up)
+                    }
+                }
+                Side::Five => {
+                    if self.my_location.1 == 100 {
+                        debug_assert!(Self::is_in_bound(
+                            (50, 50 + (self.my_location.0)),
+                            Side::Three
+                        ));
+
+                        ((50, 50 + (self.my_location.0)), Facing::Right)
+                    } else {
+                        ((self.my_location.0, self.my_location.1 - 1), Facing::Up)
+                    }
+                }
+            },
+            Facing::Down => match current_side {
+                Side::One | Side::Three | Side::Five => {
+                    ((self.my_location.0, self.my_location.1 + 1), Facing::Down)
+                }
+                Side::Two => {
+                    if self.my_location.1 == 49 {
+                        debug_assert!(Self::is_in_bound(
+                            (99, 50 + (self.my_location.0 - 100)),
+                            Side::Three
+                        ));
+
+                        ((99, 50 + (self.my_location.0 - 100)), Facing::Left)
+                    } else {
+                        ((self.my_location.0, self.my_location.1 + 1), Facing::Down)
+                    }
+                }
+                Side::Four => {
+                    if self.my_location.1 == 149 {
+                        debug_assert!(Self::is_in_bound(
+                            (49, 150 + (self.my_location.0 - 50)),
+                            Side::Six
+                        ));
+
+                        ((49, 150 + (self.my_location.0 - 50)), Facing::Left)
+                    } else {
+                        ((self.my_location.0, self.my_location.1 + 1), Facing::Down)
+                    }
+                }
+                Side::Six => {
+                    if self.my_location.1 == 199 {
+                        debug_assert!(Self::is_in_bound(
+                            (100 + self.my_location.0, 0),
+                            Side::Two
+                        ));
+
+                        ((100 + self.my_location.0, 0), Facing::Down)
+                    } else {
+                        ((self.my_location.0, self.my_location.1 + 1), Facing::Down)
+                    }
+                }
+            },
+        };
+
+        if self.map[next_loc.1][next_loc.0].is_free_space() {
+            (next_loc, next_facing, true)
+        } else {
+            (next_loc, next_facing, false)
+        }
+    }
+
+    fn do_instruction_cube(&mut self, instruction: Instruction) {
+        match instruction {
+            Instruction::Move(num_move) => {
+                for _ in 0..num_move {
+                    let (next_loc, next_facing, is_free) = self.next_location();
+                    if !is_free {
+                        break;
+                    }
+                    // Draw path over previous
+                    self.map[self.my_location.1][self.my_location.0] = Square::Path(self.my_facing);
+                    // Draw myself next
+                    self.map[next_loc.1][next_loc.0] = Square::Me(next_facing);
+
+                    // Update position
+                    self.my_location = next_loc;
+                    self.my_facing = next_facing;
+                }
+            }
+            Instruction::RotateRight => match self.my_facing {
+                Facing::Left => {
+                    self.my_facing = Facing::Up;
+                    self.map[self.my_location.1][self.my_location.0] = Square::Me(Facing::Up);
+                }
+                Facing::Right => {
+                    self.my_facing = Facing::Down;
+                    self.map[self.my_location.1][self.my_location.0] = Square::Me(Facing::Down);
+                }
+                Facing::Up => {
+                    self.my_facing = Facing::Right;
+                    self.map[self.my_location.1][self.my_location.0] = Square::Me(Facing::Right);
+                }
+                Facing::Down => {
+                    self.my_facing = Facing::Left;
+                    self.map[self.my_location.1][self.my_location.0] = Square::Me(Facing::Left);
+                }
+            },
+            Instruction::RotateLeft => match self.my_facing {
+                Facing::Left => {
+                    self.my_facing = Facing::Down;
+                    self.map[self.my_location.1][self.my_location.0] = Square::Me(Facing::Down);
+                }
+                Facing::Right => {
+                    self.my_facing = Facing::Up;
+                    self.map[self.my_location.1][self.my_location.0] = Square::Me(Facing::Up);
+                }
+                Facing::Up => {
+                    self.my_facing = Facing::Left;
+                    self.map[self.my_location.1][self.my_location.0] = Square::Me(Facing::Left);
+                }
+                Facing::Down => {
+                    self.my_facing = Facing::Right;
+                    self.map[self.my_location.1][self.my_location.0] = Square::Me(Facing::Right);
+                }
+            },
+        }
+    }
+
+    fn get_score(&self) -> u64 {
         let facing_score = match self.my_facing {
             Facing::Left => 2,
             Facing::Right => 0,
@@ -304,6 +695,16 @@ enum Square {
     None,
 }
 
+impl Square {
+    fn is_free_space(&self) -> bool {
+        match self {
+            Square::None | Square::Me(_) => panic!("unexpected call {:?}", self),
+            Square::Path(_) | Square::Open => true,
+            Square::Wall => false,
+        }
+    }
+}
+
 impl Default for Square {
     fn default() -> Self {
         Self::None
@@ -323,4 +724,14 @@ enum Instruction {
     Move(usize),
     RotateRight,
     RotateLeft,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Side {
+    One,
+    Two,
+    Three,
+    Four,
+    Five,
+    Six,
 }
