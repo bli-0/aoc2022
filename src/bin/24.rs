@@ -180,10 +180,7 @@ impl Grid {
             if next_blizzard_positions.get(&position).is_none()
                 && visited.get(&(minutes + 1, position)).is_none()
             {
-                queue.push_back((
-                    minutes + 1,
-                    position,
-                ))
+                queue.push_back((minutes + 1, position))
             }
 
             // Up
@@ -226,10 +223,7 @@ impl Grid {
                     && next_blizzard_positions.get(&right).is_none()
                     && visited.get(&(minutes + 1, right)).is_none()
                 {
-                    queue.push_back((
-                        minutes + 1,
-                        right,
-                    ))
+                    queue.push_back((minutes + 1, right))
                 }
             }
         }
